@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Custom Attendance Disk Configuration
+    |--------------------------------------------------------------------------
+    |
+    | This configuration is used by the AttendanceController to dynamically
+    | select the storage disk (e.g., 'public' or 's3') based on the
+    | ATTENDANCE_DISK environment variable.
+    |
+    */
+
+    'attendance_disk' => env('ATTENDANCE_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
@@ -41,7 +54,7 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            'url' => env('APP_URL') . '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

@@ -8,15 +8,14 @@ use Illuminate\Support\Facades\Route;
 
 // =========================================================================
 // PUBLIC ROUTES
-// Rute yang dapat diakses tanpa autentikasi
 // =========================================================================
-Route::post('login', [AuthController::class, 'login']);
+// PERBAIKAN KRITIS: Tambahkan ->name('login')
+Route::post('login', [AuthController::class, 'login'])->name('login');
 
 // =========================================================================
 // PROTECTED ROUTES (Memerlukan Sanctum Authentication)
 // =========================================================================
 Route::middleware('auth:sanctum')->group(function () {
-
     // --- Authentication & Profile ---
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('profile', [AuthController::class, 'profile']);
@@ -25,7 +24,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('attendance')->group(function () {
         Route::post('check-in', [AttendanceController::class, 'checkIn']);
         Route::post('check-out', [AttendanceController::class, 'checkOut']);
-        // Rute baru: Untuk melihat riwayat absensi pengguna yang sedang login
         Route::get('history', [AttendanceController::class, 'history']);
     });
 
@@ -38,8 +36,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:admin|hrd')->prefix('admin')->group(function () {
         // --- User Management ---
         Route::apiResource('users', UserController::class);
-
-        // Tambahkan rute untuk Admin/HRD di sini, misalnya untuk melihat
-        // laporan absensi atau persetujuan cuti dari semua pengguna.
     });
 });
