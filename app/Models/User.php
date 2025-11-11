@@ -2,18 +2,28 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use  HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $appends = [
+        'role',
+    ];
 
     /**
      * The attributes that are mass assignable.
@@ -55,6 +65,33 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
         ];
     }
+
+    // =========================================================================
+    // ACCESSOR (INI WAJIB ADA karena 'role' ada di $appends)
+    // =========================================================================
+
+    /**
+     * Get the user's roles as a single comma-separated string, forced to lowercase.
+     *
+     * @return string|null
+     */
+    public function getRoleAttribute(): ?string
+    {
+        // Langsung ambil peran. Laravel akan otomatis melakukan lazy loading
+        // jika relasi 'roles' belum dimuat, dan ini mengatasi masalah middleware.
+        $roles = $this->roles->pluck('name');
+
+        if ($roles->isEmpty()) {
+            return null;
+        }
+
+        // Menggabungkan peran, mengubah ke huruf kecil, dan mengembalikannya.
+        return strtolower($roles->implode(', '));
+    }
+
+    // =========================================================================
+    // RELATIONS
+    // =========================================================================
 
     public function attendances(): HasMany
     {
