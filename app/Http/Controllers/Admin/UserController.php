@@ -8,6 +8,9 @@ use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+// Import Request baru
+use App\Http\Requests\Admin\StoreUserRequest;
+use App\Http\Requests\Admin\UpdateUserRequest;
 
 class UserController extends Controller
 {
@@ -21,7 +24,8 @@ class UserController extends Controller
      */
     private function authorizeRole(User $user, array $allowedRoles)
     {
-        $roleString = $user->role; // Mengambil string peran dari Accessor
+        // Mengambil string peran dari Accessor (asumsi sudah di-load dengan relasi)
+        $roleString = $user->role ?? '';
 
         // Cek apakah string peran mengandung setidaknya satu dari peran yang diizinkan
         foreach ($allowedRoles as $role) {
@@ -79,8 +83,9 @@ class UserController extends Controller
 
     /**
      * Create new user (Admin only)
+     * Menggunakan StoreUserRequest
      */
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
         $authUser = $request->user();
 
@@ -89,22 +94,16 @@ class UserController extends Controller
             return response()->json(['message' => 'Unauthorized: Only Admin can create users.'], 403);
         }
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'employee_number' => 'required|string|max:50|unique:users,employee_number',
-            'password' => 'required|min:6',
-            // Pastikan role_id wajib saat membuat user baru
-            'role_id' => 'required|exists:roles,id',
-            'active' => 'boolean',
-        ]);
+        // Data sudah otomatis divalidasi dan bersih
+        $validated = $request->validated();
 
         $validated['password'] = Hash::make($validated['password']);
+        // Pastikan active memiliki nilai default true jika tidak dikirim
         $validated['active'] = $request->input('active', true);
 
         $user = User::create($validated);
 
         // PENTING: Attach role ke user baru
-        // FIX: Mengirim array kedua untuk data pivot tambahan (assigned_by)
         $user->roles()->attach($validated['role_id'], [
             'assigned_by' => $authUser->id, // Menggunakan ID user yang sedang login
         ]);
@@ -118,8 +117,9 @@ class UserController extends Controller
 
     /**
      * Update user info (Admin only)
+     * Menggunakan UpdateUserRequest
      */
-    public function update(Request $request, $id)
+    public function update(UpdateUserRequest $request, $id)
     {
         $authUser = $request->user();
 
@@ -130,19 +130,15 @@ class UserController extends Controller
 
         $user = User::findOrFail($id);
 
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:100',
-            'employee_number' => ['sometimes', 'string', Rule::unique('users')->ignore($user->id)],
-            'role_id' => 'sometimes|exists:roles,id', // 'sometimes' agar tidak wajib dikirim
-            'password' => 'nullable|min:6',
-            'active' => 'boolean',
-        ]);
+        // Data sudah otomatis divalidasi dan bersih
+        $validated = $request->validated();
 
         if (isset($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         }
 
         // Update data user di tabel 'users'
+        // Gunakan $user->fill($validated)->save() jika ada masalah dengan update()
         $user->update($validated);
 
         // =================================================================
@@ -164,7 +160,6 @@ class UserController extends Controller
         $user->load('roles');
 
         // Ambil data pivot yang pertama (asumsi user hanya punya 1 role)
-        // Menggunakan null coalescing operator untuk menghindari error jika user tidak punya role
         $pivot = $user->roles->first()->pivot ?? null;
 
         // 2. Jika role_id TIDAK dikirim TAPI assigned_by masih NULL, PERBAIKI!
